@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Webcam Image Processing</title>
+</head>
+<body>
+    <h1>Webcam Image Processing</h1>
+    <video id="video" width="640" height="480" autoplay></video>
+    <br>
+    <button id="snap">Take Picture</button>
+    <button id="reset">Reset</button>
+    <br>
+    <canvas id="canvas" style="display:none;"></canvas>
+    <br>
+    <img id="result" src="" style="display:none;">
+    <img id="processed" src="" style="display:none;">
+    <script>
+        var video = document.getElementById('video');
+        var canvas = document.getElementById('canvas');
+        var context = canvas.getContext('2d');
+        var result = document.getElementById('result');
+        var processed = document.getElementById('processed');
+        var snap = document.getElementById('snap');
+        var reset = document.getElementById('reset');
+        var width = 640;
+        var height = 480;
+        var streaming = false;
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(function(stream) {
+            video.srcObject = stream;
+            video.play();
+            streaming = true;
+        })
+        .catch(function(err) {
+            console.log("An error occurred: " + err);
+        });
+
+        snap.addEventListener('click', function() {
+            if (streaming) {
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(video, 0, 0, width, height);
+                result.src = canvas.toDataURL('image/jpeg');
+                result.style.display = 'inline-block';
+                // Send image to server for processing
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/process_image', true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        processed.src = 'data:image/jpeg;base64,' + xhr.responseText;
+                        processed.style.display = 'inline-block';
+                    }
+                };
+                xhr.send(JSON.stringify({ 'image_data': result.src }));
+            }
+        });
+
+        reset.addEventListener('click', function() {
+            result.src = '';
+            result.style.display = 'none';
+            processed.src = '';
+            processed.style.display = 'none';
+        });
+    </script>
+</body>
+</html>
